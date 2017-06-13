@@ -33,3 +33,6 @@ report.xml
 .gradle
 build/
 bin/
+
+# vim
+.swp
