@@ -46,6 +46,15 @@ func IsCouchDBEnabled() bool {
 	return false
 }
 
+//IsUStoreEnabled exposes the useUStore variable
+func IsUStoreEnabled() bool {
+	stateDatabase = viper.GetString("ledger.state.stateDatabase")
+	if stateDatabase == "UStore" {
+		return true
+	}
+	return false
+}
+
 // GetRootPath returns the filesystem path.
 // All ledger related contents are expected to be stored under this path
 func GetRootPath() string {

@@ -55,6 +55,14 @@ func TestGetCouchDBDefinition(t *testing.T) {
 	testutil.AssertEquals(t, couchDBDef.Password, "")
 }
 
+func TestIsUStoreEnabled(t *testing.T) {
+	setUpCoreYAMLConfig()
+	defer testutil.ResetConfigToDefaultValues()
+	viper.Set("ledger.state.stateDatabase", "UStore")
+	updatedValue := IsUStoreEnabled()
+	testutil.AssertEquals(t, updatedValue, true) //test config returns true
+}
+
 func TestIsHistoryDBEnabledDefault(t *testing.T) {
 	setUpCoreYAMLConfig()
 	defaultValue := IsHistoryDBEnabled()
