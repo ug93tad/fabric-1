@@ -146,7 +146,7 @@ peer:
         serverhostoverride:
 
     # Path on the file system where peer will store data (eg ledger)
-    fileSystemPath: /var/hyperledger/production
+    fileSystemPath: /tmp/hyperledger/production
 
     # Path on the file system where peer will find MSP local configurations
     mspConfigPath: msp/sampleconfig

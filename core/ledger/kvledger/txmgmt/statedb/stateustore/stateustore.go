@@ -164,18 +164,14 @@ func splitCompositeKey(compositeKey []byte) (string, string) {
 type kvScanner struct {
 	namespace string
 	dbItr     *ustorehelper.Iterator
-	init      bool
 }
 
 func newKVScanner(namespace string, dbItr *ustorehelper.Iterator) *kvScanner {
-	return &kvScanner{namespace, dbItr, false}
+	return &kvScanner{namespace, dbItr}
 }
 
 func (scanner *kvScanner) Next() (statedb.QueryResult, error) {
-	if !scanner.init {
-		scanner.dbItr.SeekToFirst()
-		scanner.init = true
-	} else if !scanner.dbItr.Next() {
+	if !scanner.dbItr.Next() {
 		return nil, nil
 	}
 	dbKey := scanner.dbItr.Key()
