@@ -34,6 +34,7 @@ func newTestEnv(t testing.TB) *testEnv {
 
 func createTestEnv(t testing.TB, path string) *testEnv {
 	viper.Set("peer.fileSystemPath", path)
+	viper.Set("ledger.state.stateDatabase", "UStore")
 	env := &testEnv{t}
 	env.cleanup()
 	return env

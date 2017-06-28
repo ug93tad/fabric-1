@@ -46,6 +46,14 @@ func TestIsCouchDBEnabled(t *testing.T) {
 	testutil.AssertEquals(t, updatedValue, true) //test config returns true
 }
 
+func TestIsUStoreEnabled(t *testing.T) {
+	setUpCoreYAMLConfig()
+	defer ledgertestutil.ResetConfigToDefaultValues()
+	viper.Set("ledger.state.stateDatabase", "UStore")
+	updatedValue := IsUStoreEnabled()
+	testutil.AssertEquals(t, updatedValue, true) //test config returns true
+}
+
 func TestIsHistoryDBEnabledDefault(t *testing.T) {
 	setUpCoreYAMLConfig()
 	defaultValue := IsHistoryDBEnabled()
