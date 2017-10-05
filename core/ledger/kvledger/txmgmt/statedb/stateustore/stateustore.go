@@ -6,7 +6,10 @@ import (
 	"bytes"
 	"errors"
 	"ustore"
+  "time"
 
+  "github.com/hyperledger/fabric/core/util"
+  "github.com/spf13/viper"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/ledger/util/ustorehelper"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
@@ -44,11 +47,18 @@ func (provider *VersionedDBProvider) Close() {
 type versionedDB struct {
 	db     *ustorehelper.DBHandle
 	dbName string
+  stat    *util.StatUtil
 }
 
 // newVersionedDB constructs an instance of VersionedDB
 func newVersionedDB(db *ustorehelper.DBHandle, dbName string) *versionedDB {
-	return &versionedDB{db, dbName}
+  vdb := &versionedDB{db, dbName, util.GetStatUtil()}
+  config := viper.New()
+  config.SetEnvPrefix("sample")
+  config.AutomaticEnv()
+  sampleInterval := config.GetInt("interval_statedb_read")
+  vdb.stat.NewStat("ustoredb", uint32(sampleInterval))
+	return vdb
 }
 
 // Open implements method in VersionedDB interface
@@ -70,6 +80,8 @@ func (vdb *versionedDB) ValidateKey(key string) error {
 // GetState implements method in VersionedDB interface
 func (vdb *versionedDB) GetState(namespace string, key string) (*statedb.VersionedValue, error) {
 	logger.Debugf("GetState(). ns=%s, key=%s", namespace, key)
+  vdb.stat.Stats["ustoredb"].Start(key)
+  start := time.Now()
 	compositeKey := constructCompositeKey(namespace, key)
 	dbVal, err := vdb.db.Get(compositeKey)
 	if err != nil {
@@ -79,6 +91,10 @@ func (vdb *versionedDB) GetState(namespace string, key string) (*statedb.Version
 		return nil, nil
 	}
 	val, ver := statedb.DecodeValue(dbVal)
+  vdb.stat.Accums["statedb_get"].Update(uint64(time.Since(start)))
+  if lt, ok := vdb.stat.Stats["ustoredb"].End(key); ok {
+    logger.Infof("GetState latency: %v", lt)
+  }
 	return &statedb.VersionedValue{Value: val, Version: ver}, nil
 }
 

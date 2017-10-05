@@ -19,7 +19,9 @@ package kvledger
 import (
 	"errors"
 	"fmt"
+  "strconv"
 
+  "github.com/spf13/viper"
 	"github.com/hyperledger/fabric/common/flogging"
 	commonledger "github.com/hyperledger/fabric/common/ledger"
 	"github.com/hyperledger/fabric/common/ledger/blkstorage"
@@ -31,6 +33,7 @@ import (
 	"github.com/hyperledger/fabric/core/ledger/ledgerconfig"
 	"github.com/hyperledger/fabric/protos/common"
 	"github.com/hyperledger/fabric/protos/peer"
+  "github.com/hyperledger/fabric/core/util"
 )
 
 var logger = flogging.MustGetLogger("kvledger")
@@ -42,6 +45,7 @@ type kvLedger struct {
 	blockStore blkstorage.BlockStore
 	txtmgmt    txmgr.TxMgr
 	historyDB  historydb.HistoryDB
+  stat      *util.StatUtil
 }
 
 // NewKVLedger constructs new `KVLedger`
@@ -56,13 +60,19 @@ func newKVLedger(ledgerID string, blockStore blkstorage.BlockStore,
 
 	// Create a kvLedger for this chain/ledger, which encasulates the underlying
 	// id store, blockstore, txmgr (state database), history database
-	l := &kvLedger{ledgerID, blockStore, txmgmt, historyDB}
+	l := &kvLedger{ledgerID, blockStore, txmgmt, historyDB, util.GetStatUtil()}
 
 	//Recover both state DB and history DB if they are out of sync with block storage
 	if err := l.recoverDBs(); err != nil {
 		panic(fmt.Errorf(`Error during state DB recovery:%s`, err))
 	}
 
+  config := viper.New()
+  config.SetEnvPrefix("sample")
+  config.AutomaticEnv()
+  sampleInterval := config.GetInt("interval_statedb_write")
+  l.stat.NewStat("kvledger", uint32(sampleInterval))
+  l.stat.NewAccum("statedb_get")
 	return l, nil
 }
 
@@ -218,6 +228,7 @@ func (l *kvLedger) Commit(block *common.Block) error {
 		return err
 	}
 
+  l.stat.Stats["kvledger"].Start(strconv.FormatUint(blockNo,10))
 	logger.Debugf("Channel [%s]: Committing block [%d] to storage", l.ledgerID, blockNo)
 	if err = l.blockStore.AddBlock(block); err != nil {
 		return err
@@ -236,6 +247,10 @@ func (l *kvLedger) Commit(block *common.Block) error {
 			panic(fmt.Errorf(`Error during commit to history db:%s`, err))
 		}
 	}
+  if val, ok := l.stat.Stats["kvledger"].End(strconv.FormatUint(blockNo,10)); ok {
+    rc, rt := l.stat.Accums["statedb_get"].Get()
+    logger.Infof("Commit time : %v #nreads: %v read_time: %v", val, rc, rt)
+  }
 
 	return nil
 }
